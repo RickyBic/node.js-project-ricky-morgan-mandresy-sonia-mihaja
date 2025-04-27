@@ -33,13 +33,17 @@ router.post('/login-coreui', async (req, res) => {
         const user = await User.findOne({ username });
 
         if (!user || !user.password) {
-            return res.status(401).json({ error: 'Invalid credentials' });
+            return res.status(401).json({
+                error: 'Invalid credentials. Please check your username or password and try again.'
+            });
         }
 
         const isPasswordValid = await bcrypt.compare(password, user.password);
 
         if (!isPasswordValid) {
-            return res.status(401).json({ error: 'Invalid credentials' });
+            return res.status(401).json({
+                error: 'Invalid credentials. The provided password is incorrect.'
+            });
         }
 
         const { token, payload } = generateJwtToken(user);
@@ -49,13 +53,15 @@ router.post('/login-coreui', async (req, res) => {
             user: payload,
         });
     } catch (err) {
-        console.error('Error in CoreUI login:', err);
-        return res.status(500).json({ error: 'Internal server error' });
+        console.error('Error during CoreUI login:', err);
+        return res.status(500).json({
+            error: 'An internal server error occurred while processing your login request. Please try again later.'
+        });
     }
 });
 
 // Lancer l'auth Google
-router.post('/login', async function (req, res, next) {
+router.post('/login', async function (req, res) {
     res.header('Access-Control-Allow-Origin', `${process.env.FRONTEND_URL}`);
     res.header('Referrer-Policy', 'no-referrer-when-downgrade');
 
@@ -82,7 +88,7 @@ async function getUserData(access_token) {
 }
 
 // Callback Google OAuth
-router.get('/callback', async function (req, res, next) {
+router.get('/callback', async function (req, res) {
     const code = req.query.code;
 
     try {
@@ -100,7 +106,9 @@ router.get('/callback', async function (req, res, next) {
         const existingUser = await User.findOne({ googleEmail: googleUser.email });
 
         if (!existingUser) {
-            return res.status(401).send('No account linked to this Google email');
+            return res.status(401).json({
+                error: 'No account linked to this Google email. Please contact an administrator to associate your Google account with an existing account.'
+            });
         }
 
         const { token, payload } = generateJwtToken(existingUser, { picture: googleUser.picture });
@@ -109,7 +117,9 @@ router.get('/callback', async function (req, res, next) {
         res.redirect(frontendRedirect);
     } catch (err) {
         console.error('Error signing in with Google:', err);
-        res.status(500).send('Authentication failed');
+        res.status(500).json({
+            error: 'Authentication failed. There was an issue signing you in with Google. Please try again later.'
+        });
     }
 });
 
