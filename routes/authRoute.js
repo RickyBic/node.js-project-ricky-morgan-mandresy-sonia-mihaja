@@ -5,7 +5,7 @@ dotenv.config();
 const { OAuth2Client } = require('google-auth-library');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
-let { User } = require('../model/schemas');
+let { User } = require('../models/schemas');
 
 const redirectUrl = `${process.env.BACKEND_URL}/auth/callback`;
 

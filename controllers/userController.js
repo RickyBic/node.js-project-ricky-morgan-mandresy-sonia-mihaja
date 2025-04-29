@@ -1,4 +1,4 @@
-const { User } = require('../model/schemas');
+const { User } = require('../models/schemas');
 const { hash } = require('bcrypt');
 
 const getUsers = async (req, res) => {
