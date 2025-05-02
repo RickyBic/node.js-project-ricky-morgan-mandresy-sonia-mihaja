@@ -14,6 +14,7 @@ const prefix = '/api';
 const authRoute = require('./routes/authRoute');
 const userRoute = require('./routes/userRoute');
 const studentRoute = require('./routes/studentRoute');
+const courseRoute = require('./routes/courseRoute');
 
 // Connexion MongoDB
 mongoose.Promise = global.Promise;
@@ -40,6 +41,7 @@ app.use('/auth', authRoute);
 // Routes API
 app.use(`${prefix}/users`, userRoute);
 app.use(`${prefix}/students`, studentRoute);
+app.use(`${prefix}/courses`, courseRoute);
 
 // Démarrage serveur
 app.listen(port, '0.0.0.0', () => {
