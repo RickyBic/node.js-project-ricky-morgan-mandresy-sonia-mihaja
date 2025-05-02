@@ -33,8 +33,12 @@ const createGrade = async (req, res) => {
   });
 
   try {
-    await newGrade.save();
-    res.status(201).json({ message: "Grade created successfully" });
+    const grade = await newGrade.save();
+     const populatedGrade = await Grade.findById(newGrade._id)
+      .populate('student', 'firstName lastName')
+      .populate('course', 'name code');
+
+    res.status(201).json(populatedGrade);
   } catch (err) {
     res.status(400).json({ message: err.message });
   }
