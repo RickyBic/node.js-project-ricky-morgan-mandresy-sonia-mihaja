@@ -5,11 +5,12 @@ dotenv.config();
 const { OAuth2Client } = require('google-auth-library');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
+const fetch = require('node-fetch');
 let { User } = require('../models/schemas');
 
 const redirectUrl = `${process.env.BACKEND_URL}/auth/callback`;
 
-// Fonction utilitaire pour générer le token et payload
+// Génère un token JWT avec les infos essentielles
 function generateJwtToken(user, extra = {}) {
     const payload = {
         id: user._id,
@@ -17,15 +18,29 @@ function generateJwtToken(user, extra = {}) {
         googleEmail: user.googleEmail,
         role: user.role,
         studentId: user.studentId,
-        ...extra
+        ...extra,
     };
 
     const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '24h' });
-
     return { token, payload };
 }
 
-// Connexion via username/password (CoreUI)
+// Redirige le frontend avec un message d'erreur encodé dans authError
+function redirectWithError(res, message) {
+    const encoded = encodeURIComponent(message);
+    res.redirect(`${process.env.FRONTEND_URL}/?authError=${encoded}`);
+}
+
+// Récupère les infos utilisateur depuis Google
+async function getUserData(access_token) {
+    const response = await fetch(`https://www.googleapis.com/oauth2/v3/userinfo?access_token=${access_token}`);
+    if (!response.ok) {
+        throw new Error('Failed to fetch user info from Google');
+    }
+    return await response.json();
+}
+
+// Authentification classique CoreUI (username/password)
 router.post('/login-coreui', async (req, res) => {
     const { username, password } = req.body;
 
@@ -39,7 +54,6 @@ router.post('/login-coreui', async (req, res) => {
         }
 
         const isPasswordValid = await bcrypt.compare(password, user.password);
-
         if (!isPasswordValid) {
             return res.status(401).json({
                 error: 'Invalid credentials. The provided password is incorrect.'
@@ -47,11 +61,8 @@ router.post('/login-coreui', async (req, res) => {
         }
 
         const { token, payload } = generateJwtToken(user);
+        return res.json({ token, user: payload });
 
-        return res.json({
-            token,
-            user: payload,
-        });
     } catch (err) {
         console.error('Error during CoreUI login:', err);
         return res.status(500).json({
@@ -60,9 +71,9 @@ router.post('/login-coreui', async (req, res) => {
     }
 });
 
-// Lancer l'auth Google
-router.post('/login', async function (req, res) {
-    res.header('Access-Control-Allow-Origin', `${process.env.FRONTEND_URL}`);
+// Démarre le flow OAuth Google
+router.post('/login', (req, res) => {
+    res.header('Access-Control-Allow-Origin', process.env.FRONTEND_URL);
     res.header('Referrer-Policy', 'no-referrer-when-downgrade');
 
     const oAuth2Client = new OAuth2Client(
@@ -74,22 +85,19 @@ router.post('/login', async function (req, res) {
     const authorizeUrl = oAuth2Client.generateAuthUrl({
         access_type: 'offline',
         scope: 'https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email openid',
-        prompt: 'consent'
+        prompt: 'consent',
     });
 
     res.json({ url: authorizeUrl });
 });
 
-// Obtenir les infos Google
-async function getUserData(access_token) {
-    const response = await fetch(`https://www.googleapis.com/oauth2/v3/userinfo?access_token=${access_token}`);
-    const data = await response.json();
-    return data;
-}
-
-// Callback Google OAuth
-router.get('/callback', async function (req, res) {
+// Callback après authentification Google
+router.get('/callback', async (req, res) => {
     const code = req.query.code;
+
+    if (!code) {
+        return redirectWithError(res, 'Authorization code missing from Google callback.');
+    }
 
     try {
         const oAuth2Client = new OAuth2Client(
@@ -102,24 +110,20 @@ router.get('/callback', async function (req, res) {
         oAuth2Client.setCredentials(result.tokens);
 
         const googleUser = await getUserData(result.tokens.access_token);
-
         const existingUser = await User.findOne({ googleEmail: googleUser.email });
 
         if (!existingUser) {
-            return res.status(401).json({
-                error: 'No account linked to this Google email. Please contact an administrator to associate your Google account with an existing account.'
-            });
+            return redirectWithError(res, 'No account is linked to this Google email. Please contact an administrator.');
         }
 
         const { token, payload } = generateJwtToken(existingUser, { picture: googleUser.picture });
 
         const frontendRedirect = `${process.env.FRONTEND_URL}/?token=${token}&user=${encodeURIComponent(JSON.stringify(payload))}`;
-        res.redirect(frontendRedirect);
+        return res.redirect(frontendRedirect);
+
     } catch (err) {
         console.error('Error signing in with Google:', err);
-        res.status(500).json({
-            error: 'Authentication failed. There was an issue signing you in with Google. Please try again later.'
-        });
+        return redirectWithError(res, 'Authentication failed. Please try again later.');
     }
 });
 
