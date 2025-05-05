@@ -1,4 +1,4 @@
-const { Course, Grade, Student } = require("../models/schemas")
+const { Course, Student, User, Grade } = require ("../models/schemas");
 const mongoose = require("mongoose");
 
 const getAveragePerCourse = async (req, res) => {
@@ -121,8 +121,48 @@ const GetDashoardScolarite = async(req, res) => {
     }
 }
 
+const getDashboardAdminData = async (req, res) => {
+  try {
+    const courses = await Course.countDocuments();
+    const students = await Student.countDocuments();
+    const users = await User.countDocuments();
+    const grades = await Grade.countDocuments();
+
+    // Compter les utilisateurs par rôle
+    const userByRoleRaw = await User.aggregate([
+      {
+        $group: {
+          _id: "$role",
+          count: { $sum: 1 }
+        }
+      }
+    ]);
+
+    const userByRole = {};
+    userByRoleRaw.forEach(item => {
+      userByRole[item._id] = item.count;
+    });
+
+    const avgGradesByCourse = await Grade.aggregate([
+       const dashboardData = {
+      courses,
+      students,
+      users,
+      grades,
+      userByRole,
+      avgGradesByCourse
+    };
+
+    res.json(dashboardData);
+  } catch (error) {
+    console.error("Dashboard error:", error);
+    res.status(500).json({ error: "Erreur lors du chargement du dashboard" });
+  }
+};
+
 module.exports = {
   getAveragePerCourse,
   getGradeDistribution,
-  GetDashoardScolarite
+  GetDashoardScolarite,
+  getDashboardAdminData
 };

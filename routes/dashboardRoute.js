@@ -3,9 +3,10 @@ const router = express.Router();
 const {
   getAveragePerCourse,
   getGradeDistribution,
+  GetDashoardScolarite,
+  getDashboardAdminData
 } = require("../controllers/dashboardController");
 const { authMiddleware, requireRole } = require("../middleware/authMiddleware");
-const { GetDashoardScolarite } = require("../controllers/dashboardController");
 
 router.use(authMiddleware);
 
@@ -20,5 +21,6 @@ router.get(
   getGradeDistribution
 );
 router.get("/dashboardScolarite", requireRole(["SCOLARITE"]), GetDashoardScolarite)
+router.get("/dashboardAdmin", requireRole(["ADMIN"]), getDashboardAdminData);
 
 module.exports = router;
