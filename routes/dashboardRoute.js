@@ -5,6 +5,7 @@ const {
   getGradeDistribution,
 } = require("../controllers/dashboardController");
 const { authMiddleware, requireRole } = require("../middleware/authMiddleware");
+const { GetDashoardScolarite } = require("../controllers/dashboardController");
 
 router.use(authMiddleware);
 
@@ -18,5 +19,6 @@ router.get(
   requireRole(["ADMIN", "SCOLARITE", "STUDENT"]),
   getGradeDistribution
 );
+router.get("/dashboardScolarite", requireRole(["SCOLARITE"]), GetDashoardScolarite)
 
 module.exports = router;
