@@ -1,4 +1,4 @@
-const { Course, Student, User, Grade } = require ("../models/schemas");
+const { Course, Student, User, Grade } = require("../models/schemas");
 const mongoose = require("mongoose");
 
 const getAveragePerCourse = async (req, res) => {
@@ -65,61 +65,62 @@ const getGradeDistribution = async (req, res) => {
   }
 };
 
-const GetDashoardScolarite = async(req, res) => {
-        try {
-        const studentCount = await Student.countDocuments();
-        const courseCount = await Course.countDocuments();
-        const emptyCoursesCount = await Course.find({ students: { $size: 0 } }).countDocuments();
+const getDashboardScolarite = async (req, res) => {
+  try {
+    const studentCount = await Student.countDocuments();
+    const courseCount = await Course.countDocuments();
+    const emptyCoursesCount = await Course.find({ students: { $size: 0 } }).countDocuments();
 
-        const countStudentByProgram = await Student.aggregate([
-        {
-            $group: {
-            _id: "$program",       
-            count: { $sum: 1 }      
-            }
-        }
-        ]);
+    const countStudentByProgram = await Student.aggregate([
+      {
+        $group: {
+          _id: "$program",
+          count: { $sum: 1 },
+        },
+      },
+    ]);
 
-        const avgGradesByCourse = await Grade.aggregate([
-        {
-          $group: {
-            _id: "$course", // ID du cours
-            averageGrade: { $avg: "$grade" } // Moyenne des notes
-          }
+    const avgGradesByCourse = await Grade.aggregate([
+      {
+        $group: {
+          _id: "$course",
+          averageGrade: { $avg: "$grade" },
         },
-        {
-          $lookup: {
-            from: "courses", // nom de la collection (mongoose transforme "Course" en "courses")
-            localField: "_id",
-            foreignField: "_id",
-            as: "course"
-          }
+      },
+      {
+        $lookup: {
+          from: "courses",
+          localField: "_id",
+          foreignField: "_id",
+          as: "course",
         },
-        { $unwind: "$course" }, // pour aplatir le tableau retourné par $lookup
-        {
-          $project: {
-            _id: 0,
-            courseId: "$course._id",
-            courseName: "$course.name",
-            courseCode: "$course.code",
-            averageGrade: { $round: ["$averageGrade", 2] }
-          }
+      },
+      { $unwind: "$course" },
+      {
+        $project: {
+          _id: 0,
+          courseId: "$course._id",
+          courseName: "$course.name",
+          courseCode: "$course.code",
+          averageGrade: { $round: ["$averageGrade", 2] },
         },
-      ]);
+      },
+    ]);
 
-        const dashboardData = {
-            students: studentCount,
-            courses: courseCount,
-            emptyCourses: emptyCoursesCount,
-            studentByProgram : countStudentByProgram,
-            avgGradesByCourse : avgGradesByCourse
-        };
-        res.json(dashboardData);
-    } catch (error) {
-        console.error("Error fetching dashboard data:", error);
-        res.status(500).json({ error: "Internal server error" });
-    }
-}
+    const dashboardData = {
+      students: studentCount,
+      courses: courseCount,
+      emptyCourses: emptyCoursesCount,
+      studentByProgram: countStudentByProgram,
+      avgGradesByCourse: avgGradesByCourse,
+    };
+
+    res.json(dashboardData);
+  } catch (error) {
+    console.error("Error fetching dashboard data:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
 
 const getDashboardAdminData = async (req, res) => {
   try {
@@ -128,14 +129,13 @@ const getDashboardAdminData = async (req, res) => {
     const users = await User.countDocuments();
     const grades = await Grade.countDocuments();
 
-    // Compter les utilisateurs par rôle
     const userByRoleRaw = await User.aggregate([
       {
         $group: {
           _id: "$role",
-          count: { $sum: 1 }
-        }
-      }
+          count: { $sum: 1 },
+        },
+      },
     ]);
 
     const userByRole = {};
@@ -144,13 +144,38 @@ const getDashboardAdminData = async (req, res) => {
     });
 
     const avgGradesByCourse = await Grade.aggregate([
-       const dashboardData = {
+      {
+        $group: {
+          _id: "$course",
+          averageGrade: { $avg: "$grade" },
+        },
+      },
+      {
+        $lookup: {
+          from: "courses",
+          localField: "_id",
+          foreignField: "_id",
+          as: "course",
+        },
+      },
+      { $unwind: "$course" },
+      {
+        $project: {
+          _id: 0,
+          courseId: "$course._id",
+          courseName: "$course.name",
+          averageGrade: { $round: ["$averageGrade", 2] },
+        },
+      },
+    ]);
+
+    const dashboardData = {
       courses,
       students,
       users,
       grades,
       userByRole,
-      avgGradesByCourse
+      avgGradesByCourse,
     };
 
     res.json(dashboardData);
@@ -163,6 +188,6 @@ const getDashboardAdminData = async (req, res) => {
 module.exports = {
   getAveragePerCourse,
   getGradeDistribution,
-  GetDashoardScolarite,
-  getDashboardAdminData
+  getDashboardScolarite,
+  getDashboardAdminData,
 };
