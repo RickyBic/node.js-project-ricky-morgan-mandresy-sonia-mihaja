@@ -1,4 +1,4 @@
-const { Student, Grade } = require("../models/schemas");
+const { Student, User, Grade } = require("../models/schemas");
 
 const getStudents = async (req, res) => {
   const students = await Student.find();
@@ -38,9 +38,23 @@ const updateStudent = async (req, res) => {
 };
 
 const deleteStudent = async (req, res) => {
-  const student = await Student.findByIdAndDelete(req.params.id);
-  if (!student) return res.status(404).json({ message: "Student not found" });
-  res.json({ message: "Student deleted successfully" });
+  try {
+    const student = await Student.findByIdAndDelete(req.params.id);
+    if (!student) {
+      return res.status(404).json({ message: "Student not found" });
+    }
+
+    // Supprimer les utilisateurs liés à cet étudiant
+    await User.deleteMany({ studentId: student._id });
+
+    // Supprimer les notes associées à cet étudiant
+    await Grade.deleteMany({ student: student._id });
+
+    res.json({ message: "Student and related users and grades deleted successfully" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error while deleting student" });
+  }
 };
 
 const getStudentGrades = async (req, res) => {

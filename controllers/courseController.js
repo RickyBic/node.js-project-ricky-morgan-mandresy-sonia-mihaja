@@ -1,4 +1,4 @@
-const { Course } = require("../models/schemas");
+const { Course, Grade } = require("../models/schemas");
 
 const getCourses = async (req, res) => {
   const courses = await Course.find();
@@ -29,16 +29,27 @@ const updateCourse = async (req, res) => {
   if (!course) return res.status(404).json({ message: "Course not found" });
 
   course.name = name;
-    course.code = code;
+  course.code = code;
 
   await course.save();
   res.json({ message: "Course updated successfully" });
 };
 
 const deleteCourse = async (req, res) => {
-  const course = await Course.findByIdAndDelete(req.params.id);
-  if (!course) return res.status(404).json({ message: "Course not found" });
-  res.json({ message: "Course deleted successfully" });
+  try {
+    const course = await Course.findByIdAndDelete(req.params.id);
+    if (!course) {
+      return res.status(404).json({ message: "Course not found" });
+    }
+
+    // Supprimer les notes liées à ce cours
+    await Grade.deleteMany({ course: course._id });
+
+    res.json({ message: "Course and related grades deleted successfully" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error while deleting course" });
+  }
 };
 
 module.exports = {
