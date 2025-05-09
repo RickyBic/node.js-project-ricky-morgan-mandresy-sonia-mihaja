@@ -28,7 +28,7 @@ mongoose.connect(process.env.MONGO_URI, options)
 
 // Middleware CORS
 app.use(cors({
-    origin: process.env.FRONTEND_URL,
+    origin: process.env.FRONTEND_URL || '*',
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
 }));
@@ -49,7 +49,7 @@ app.use(`${prefix}/dashboard`, dashboardRoute);
 
 // Démarrage serveur
 app.listen(port, '0.0.0.0', () => {
-    console.log(`Serveur démarré sur http://localhost:${port}`);
+    console.log(`Serveur démarré sur le port ${port}`);
 });
 
 module.exports = app;

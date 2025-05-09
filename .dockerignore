@@ -1,0 +1,30 @@
+# Ignore node_modules car elles seront installées dans l'image Docker
+node_modules/
+
+# Ignore les fichiers de logs générés
+*.log
+
+# Ignore les fichiers temporaires
+*.tmp
+*.swp
+
+# Ignore les fichiers de configuration spécifiques à l'éditeur
+.vscode/
+.idea/
+
+# Ignore les fichiers du système d'exploitation (Windows/Mac/Linux)
+.DS_Store
+Thumbs.db
+
+# Ignore le dossier de build du client React (si tu veux éviter de copier les fichiers déjà build)
+client/build/
+
+# Ignore les fichiers de configuration Docker
+docker-compose.override.yml
+
+# Ignore les fichiers de cache
+npm-debug.log
+yarn-error.log
+
+# Ignore les fichiers et dossiers spécifiques à l'environnement local
+.env
